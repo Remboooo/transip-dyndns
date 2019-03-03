@@ -1,0 +1,7 @@
+username: myusername
+keyfile: decrypted_key
+expire: 300
+A:
+        - some-domain.com
+        - subdomain.some-other-domain.com
+
