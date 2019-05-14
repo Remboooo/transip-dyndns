@@ -3,6 +3,7 @@ import logging
 import yaml
 import sys
 import os
+import urllib.error
 import re
 from collections import defaultdict
 
@@ -65,7 +66,7 @@ def update_a_records(config_domains, avail_domains, expire_time, domain_service)
                 continue
             if entry.name not in records:
                 continue
-            log.debug("Found relevant A record: {}".format(entry))
+            log.debug("Found relevant A record on {}: {}".format(domain, entry))
             records.remove(entry.name)
             if entry.content == ipv4:
                 log.debug("A record for '{}' on domain '{}' is already up to date".format(entry.name, domain))
@@ -100,9 +101,9 @@ def run(config, config_path):
     try:
         domain_service = DomainService(username, keyfile)
         domains = domain_service.get_domain_names()
-        log.debug("Found domains: {}".format(domains))
+        log.debug("Domains managed by TransIP on this account: {}".format(domains))
         update_a_records(a_records, domains, expire_time, domain_service)
-    except WebFault as err:
+    except (WebFault, urllib.error.URLError) as err:
         log.error("Could not query TransIP: {}".format(err))
         sys.exit(1)
 
