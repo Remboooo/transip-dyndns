@@ -1,7 +1,7 @@
 ### TransIP dynamic DNS updater
 
 ## Installation
-1. Create a virtualenv in a venv/ folder of this directory with Python 3
+1. Create a virtualenv in a venv/ folder of this directory with Python 3: `virtualenv -p python3 venv`
 2. Install https://github.com/benkonrath/transip-api into this virtualenv
 3. Follow the instructions for getting an API key from the above repo
 4. Create a `transip_config.yml` based on `transip_config.yml.example`
