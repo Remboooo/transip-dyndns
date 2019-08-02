@@ -12,7 +12,7 @@ from suds import WebFault
 from transip.service.domain import DomainService
 from transip.service.objects import DnsEntry
 
-ipv4_url = 'https://ip.42.pl/raw'
+ipv4_url = 'https://icanhazip.com'
 
 log = logging.getLogger('transip-dyndns')
 
