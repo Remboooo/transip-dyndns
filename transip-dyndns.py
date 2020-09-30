@@ -98,8 +98,11 @@ def run(config, config_path):
     if not os.path.isabs(keyfile):
         keyfile = os.path.abspath(os.path.join(os.path.dirname(config_path), keyfile))
 
+    with open(keyfile, 'r') as f:
+        key = f.read()
+
     try:
-        domain_service = DomainService(username, keyfile)
+        domain_service = DomainService(username, key)
         domains = domain_service.get_domain_names()
         log.debug("Domains managed by TransIP on this account: {}".format(domains))
         update_a_records(a_records, domains, expire_time, domain_service)
@@ -122,7 +125,7 @@ def main():
     try:
         with open(args.file, 'r') as f:
             try:
-                config = yaml.load(f)
+                config = yaml.safe_load(f)
                 run(config, os.path.abspath(args.file))
             except yaml.YAMLError as e:
                 log.error("Error in config file: {}".format(e))
