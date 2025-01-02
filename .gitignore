@@ -1,4 +1,5 @@
 /venv
 /decrypted_key
+/key
 /transip_config.yml
 

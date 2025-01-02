@@ -7,10 +7,7 @@ import urllib.error
 import re
 from collections import defaultdict
 
-from suds import WebFault
-
-from transip.service.domain import DomainService
-from transip.service.objects import DnsEntry
+import transip
 
 ipv4_url = 'https://icanhazip.com'
 
@@ -29,7 +26,7 @@ def get_ipv4():
     return ipv4
 
 
-def update_a_records(config_domains, avail_domains, expire_time, domain_service):
+def update_a_records(config_domains, avail_domains, expire_time, client):
     domain_records = defaultdict(set)
 
     # Create inventory of which records to update for each domain
@@ -42,7 +39,7 @@ def update_a_records(config_domains, avail_domains, expire_time, domain_service)
         else:
             record, domain, tld = parts
         domain = "{}.{}".format(domain, tld)
-        if domain not in avail_domains:
+        if not any(avail_domain.name == domain for avail_domain in avail_domains):
             raise ConfigError("Configured domain '{}' does not belong to this account".format(domain))
         log.debug("A record to update: '{}' on domain '{}'".format(record, domain))
         domain_records[domain].add(record)
@@ -58,7 +55,8 @@ def update_a_records(config_domains, avail_domains, expire_time, domain_service)
 
     # Update records
     for domain, records in domain_records.items():
-        entries = domain_service.get_info(domain).dnsEntries
+        domain_service = client.domains.get(domain)
+        entries = domain_service.dns.list()
 
         # Update existing entries
         for entry in entries:
@@ -70,21 +68,15 @@ def update_a_records(config_domains, avail_domains, expire_time, domain_service)
             records.remove(entry.name)
             if entry.content == ipv4:
                 log.debug("A record for '{}' on domain '{}' is already up to date".format(entry.name, domain))
-                continue
             else:
                 log.info("Updating A record for '{}' on domain '{}' to '{}'".format(entry.name, domain, ipv4))
                 entry.content = ipv4
-                updated = True
+                domain_service.dns.update(entry)
         
         # Create new entries
         for new_record in records:
             log.info("Creating new A record for '{}' on domain '{}' with content '{}' and expiry {}".format(new_record, domain, ipv4, expire_time))
-            entries.append(DnsEntry(new_record, expire_time, 'A', ipv4))
-            updated = True
-
-        # Set new entries via API if needed
-        if updated:
-            domain_service.set_dns_entries(domain, entries)
+            domain_service.dns.create({"name": new_record, "expire": expire_time, "type": "A", "content": ipv4})
 
 
 def run(config, config_path):
@@ -101,14 +93,10 @@ def run(config, config_path):
     with open(keyfile, 'r') as f:
         key = f.read()
 
-    try:
-        domain_service = DomainService(username, key)
-        domains = domain_service.get_domain_names()
-        log.debug("Domains managed by TransIP on this account: {}".format(domains))
-        update_a_records(a_records, domains, expire_time, domain_service)
-    except (WebFault, urllib.error.URLError) as err:
-        log.error("Could not query TransIP: {}".format(err))
-        sys.exit(1)
+    client = transip.TransIP(login=username, private_key=key, global_key=True)
+    domains = client.domains.list()
+    log.debug("Domains managed by TransIP on this account: {}".format(domains))
+    update_a_records(a_records, domains, expire_time, client)
 
 
 def main():
@@ -131,7 +119,7 @@ def main():
                 log.error("Error in config file: {}".format(e))
                 sys.exit(-1)
     except OSError as e:
-        log.error("Could not open config file: {}".format(e))
+        log.error("Could not open config file: {}".format(e), e)
         sys.exit(-1)
     except ConfigError as e:
         log.error(str(e))
