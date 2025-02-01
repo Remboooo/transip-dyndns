@@ -71,7 +71,7 @@ def update_a_records(config_domains, avail_domains, expire_time, client):
             else:
                 log.info("Updating A record for '{}' on domain '{}' to '{}'".format(entry.name, domain, ipv4))
                 entry.content = ipv4
-                domain_service.dns.update(entry)
+                entry.update()
         
         # Create new entries
         for new_record in records:
